@@ -30,8 +30,8 @@ export default function App() {
               <Route path="historico/:sessionId" element={<SessionDetailPage />} />
               <Route path="dados" element={<DataPage />} />
             </Route>
-            <Route path="sessao/:workoutId" element={<SessionPage />} />
-            <Route path="sessao/:workoutId/resumo" element={<SummaryPage />} />
+            <Route path="sessao" element={<SessionPage />} />
+            <Route path="sessao/resumo" element={<SummaryPage />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
           <Toasts />
@@ -50,7 +50,7 @@ function Toasts() {
     <div
       className={cn(
         'pointer-events-none fixed inset-x-0 z-[70] flex flex-col items-center gap-2 px-4',
-        onSession ? 'bottom-[max(1rem,env(safe-area-inset-bottom))]' : 'bottom-[calc(5.4rem+env(safe-area-inset-bottom))]',
+        onSession ? 'bottom-[calc(6.2rem+env(safe-area-inset-bottom))]' : 'bottom-[calc(5.4rem+env(safe-area-inset-bottom))]',
       )}
     >
       {toasts.map((toast) => (

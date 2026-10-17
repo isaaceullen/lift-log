@@ -16,6 +16,26 @@ const PREFERRED = [
   'Isolado',
 ]
 
+export function seedCategoryNames(exercises: Exercise[]): string[] {
+  const names = new Set<string>()
+  for (const exercise of exercises) {
+    if (exercise.source !== 'seed') continue
+    for (const category of exercise.categories) names.add(category)
+  }
+  return [...names]
+}
+
+/** Categorias criadas no aparelho. As que já existem num exercício da base ficam de fora. */
+export function removableCategoryNames(state: Pick<AppState, 'customCategories' | 'exercises'>): string[] {
+  const locked = new Set(seedCategoryNames(state.exercises))
+  return allCategories(state).filter(
+    (name) =>
+      !locked.has(name) &&
+      (state.customCategories.includes(name) ||
+        state.exercises.some((exercise) => exercise.source === 'user' && exercise.categories.includes(name))),
+  )
+}
+
 export function allCategories(state: Pick<AppState, 'customCategories' | 'exercises'>): string[] {
   const names = new Set<string>(state.customCategories)
   for (const exercise of state.exercises) {

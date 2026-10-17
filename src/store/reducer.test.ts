@@ -9,7 +9,7 @@ function withExercise(state: AppState, exercise: Exercise, item: WorkoutExercise
     exercises: [exercise],
     workouts: {
       ...state.workouts,
-      A: { ...state.workouts.A, exercises: [item], restSeconds: 60, timerEnabled: true },
+      A: { ...state.workouts.A, exercises: [item] },
     },
     lastUsed: { [exercise.id]: { load: 40, reps: 8 } },
   }
@@ -39,7 +39,7 @@ describe('session flow', () => {
   function start(state: AppState) {
     return reducer(state, {
       type: 'START_SESSION',
-      workoutId: 'A',
+      workoutIds: ['A'],
       sessionId: 'session-1',
       startedAt: '2026-10-16T12:00:00.000Z',
       setIds: { 'slot-1': ['s1', 's2', 's3'] },
@@ -105,24 +105,39 @@ describe('session flow', () => {
     }
     const live = reducer(state, {
       type: 'START_SESSION',
-      workoutId: 'A',
+      workoutIds: ['A'],
       sessionId: 'session-2',
       startedAt: '2026-10-16T12:00:00.000Z',
       setIds: { 'slot-1': ['a'], 'slot-2': ['b'] },
     })
-    const moved = reducer(live, { type: 'REORDER_SESSION', orderedIds: ['slot-2', 'slot-1'] })
+    const moved = reducer(live, { type: 'REORDER_SESSION', workoutId: 'A', orderedIds: ['slot-2', 'slot-1'] })
     expect(moved.workouts.A.exercises.map((entry) => entry.id)).toEqual(['slot-2', 'slot-1'])
     expect(moved.activeSession?.exercises.map((entry) => entry.instanceId)).toEqual(['slot-2', 'slot-1'])
   })
 
-  it('remembers a deleted seed exercise and blocks a duplicate name', () => {
+  it('refuses to edit or delete a seed exercise and blocks a duplicate name', () => {
     const removed = reducer(base, { type: 'DELETE_EXERCISE', id: exercise.id })
-    expect(removed.deletedSeedIds).toContain('seed-001')
-    expect(removed.workouts.A.exercises).toHaveLength(0)
+    expect(removed.exercises).toHaveLength(1)
+    expect(removed.deletedSeedIds).toHaveLength(0)
+    expect(removed.workouts.A.exercises).toHaveLength(1)
+    const renamed = reducer(base, {
+      type: 'UPDATE_EXERCISE',
+      id: exercise.id,
+      patch: { name: 'Outro nome', categories: ['Peito'], imageUrl: '' },
+    })
+    expect(renamed.exercises[0]?.name).toBe('Supino Reto com Barra')
     const blocked = reducer(base, {
       type: 'ADD_EXERCISE',
       exercise: { ...exercise, id: 'other', name: 'SUPINO RETO COM BARRA', source: 'user' },
     })
     expect(blocked.exercises).toHaveLength(1)
+  })
+
+  it('marks every set when the last set of an exercise is checked', () => {
+    const live = start(base)
+    const last = reducer(live, { type: 'TOGGLE_SET', instanceId: 'slot-1', setId: 's3', completed: true })
+    expect(last.activeSession?.exercises[0]?.sets.every((set) => set.completed)).toBe(true)
+    const middle = reducer(live, { type: 'TOGGLE_SET', instanceId: 'slot-1', setId: 's1', completed: true })
+    expect(middle.activeSession?.exercises[0]?.sets.filter((set) => set.completed)).toHaveLength(1)
   })
 })

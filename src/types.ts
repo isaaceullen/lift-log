@@ -12,6 +12,8 @@ export type Exercise = {
   source: 'seed' | 'user'
 }
 
+export type CardioPosition = 'start' | 'end'
+
 export type WorkoutExercise = {
   id: string
   exerciseId: string
@@ -24,16 +26,15 @@ export type WorkoutExercise = {
 
 export type Workout = {
   id: WorkoutId
-  label: string
   days: number[]
   cardioEnabled: boolean
-  timerEnabled: boolean
-  restSeconds: number
+  cardioPosition: CardioPosition
   exercises: WorkoutExercise[]
 }
 
 export type LoggedExercise = {
   instanceId: string
+  workoutId: WorkoutId
   exerciseId: string
   name: string
   categories: string[]
@@ -46,16 +47,19 @@ export type LoggedExercise = {
   totalSets: number
 }
 
+export type SessionCardio = {
+  workoutId: WorkoutId
+  completed: boolean
+}
+
 export type Session = {
   id: string
-  workoutId: WorkoutId
-  workoutLabel: string
+  workoutIds: WorkoutId[]
   startedAt: string
   finishedAt: string
   durationSeconds: number
   notes: string
-  cardioEnabled: boolean
-  cardioCompleted: boolean
+  cardios: SessionCardio[]
   exercises: LoggedExercise[]
   totalVolume: number
 }
@@ -68,10 +72,17 @@ export type ActiveSet = {
 
 export type ActiveExercise = {
   instanceId: string
+  workoutId: WorkoutId
   exerciseId: string
   load: number
   reps: number
   sets: ActiveSet[]
+}
+
+export type ActiveCardio = {
+  workoutId: WorkoutId
+  position: CardioPosition
+  completed: boolean
 }
 
 export type LastUsed = {
@@ -81,10 +92,10 @@ export type LastUsed = {
 
 export type ActiveSession = {
   id: string
-  workoutId: WorkoutId
+  workoutIds: WorkoutId[]
   startedAt: string
   restSeconds: number
-  cardioCompleted: boolean
+  cardios: ActiveCardio[]
   exercises: ActiveExercise[]
   lastUsedSnapshot: Record<string, LastUsed | null>
   pausedMs: number
@@ -94,7 +105,8 @@ export type ActiveSession = {
 export type AppSettings = {
   theme: ThemeId
   soundEnabled: boolean
-  installHintDismissed: boolean
+  timerEnabled: boolean
+  restSeconds: number
 }
 
 export type AppState = {

@@ -1,21 +1,7 @@
 @import "tailwindcss";
 
-:root {
-  --ink: #07080b;
-  --panel: #12141b;
-  --raised: #1c2030;
-  --line: #313748;
-  --paper: #f4f6f8;
-  --mist: #9aa3b5;
-  --accent: #d6ff3c;
-  --accent-ink: #15190a;
-  --heat: #ff4d2e;
-  --good: #3ddc97;
-  --warn: #ffc14a;
-  color-scheme: dark;
-}
-
-:root[data-theme="brasa"] {
+:root,
+:root[data-theme='brasa'] {
   --ink: #0c0907;
   --panel: #17110e;
   --raised: #261c16;
@@ -27,6 +13,21 @@
   --heat: #ff5a36;
   --good: #3ddc97;
   --warn: #ffd27a;
+  color-scheme: dark;
+}
+
+:root[data-theme='noite'] {
+  --ink: #07080b;
+  --panel: #12141b;
+  --raised: #1c2030;
+  --line: #313748;
+  --paper: #f4f6f8;
+  --mist: #9aa3b5;
+  --accent: #d6ff3c;
+  --accent-ink: #15190a;
+  --heat: #ff4d2e;
+  --good: #3ddc97;
+  --warn: #ffc14a;
 }
 
 @theme inline {

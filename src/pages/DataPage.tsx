@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react'
-import { InstallBanner } from '../components/InstallBanner'
 import { Dialog } from '../components/Dialog'
+import { Stepper } from '../components/Stepper'
 import { Button, TextField, Toggle, cn } from '../components/ui'
 import { dateKey } from '../lib/dates'
 import { formatBytes } from '../lib/format'
@@ -54,13 +54,34 @@ export function DataPage() {
         </div>
       </section>
 
-      <div className="mt-4">
+      <div className="mt-4 space-y-3">
         <Toggle
           checked={state.settings.soundEnabled}
           onChange={(soundEnabled) => updateSettings({ soundEnabled })}
           label="Som do descanso"
           hint="Um aviso curto quando o timer chega a zero."
         />
+        <Toggle
+          checked={state.settings.timerEnabled}
+          onChange={(timerEnabled) => updateSettings({ timerEnabled })}
+          label="Timer entre séries"
+          hint="Vale para todos os treinos. Ao marcar uma série, o descanso abre."
+        />
+        {state.settings.timerEnabled ? (
+          <div className="rounded-3xl border border-line bg-panel p-4">
+            <Stepper
+              label="Descanso"
+              suffix="s"
+              integer
+              value={state.settings.restSeconds}
+              min={5}
+              max={600}
+              step={5}
+              onChange={(restSeconds) => updateSettings({ restSeconds })}
+            />
+            <p className="mt-2 text-xs text-mist">Um ajuste feito no meio da sessão vale só até ela acabar.</p>
+          </div>
+        ) : null}
       </div>
 
       <section className="mt-6 rounded-3xl border border-line bg-panel p-4">
@@ -101,22 +122,9 @@ export function DataPage() {
       <section className="mt-4 rounded-3xl border border-line bg-panel p-4">
         <h2 className="font-display text-3xl uppercase leading-none">Biblioteca inicial</h2>
         <p className="mt-2 text-sm leading-relaxed text-mist">
-          O arquivo <code className="text-paper">public/seed-exercises.json</code> é editável no repositório. Novos nomes entram na próxima abertura. Um exercício excluído aqui não volta. Descrições não fazem parte desse arquivo: elas nascem quando você monta o treino.
+          O arquivo <code className="text-paper">public/seed-exercises.json</code> é editável no repositório. Novos nomes entram na próxima abertura. Exercícios dessa base não podem ser editados nem excluídos. Descrições não fazem parte desse arquivo: elas nascem quando você monta o treino.
         </p>
       </section>
-
-      <div className="mt-4">
-        {state.settings.installHintDismissed ? (
-          <div className="rounded-3xl border border-line bg-panel p-4 text-sm text-mist">
-            No iPhone, abra no Safari, toque em Compartilhar e escolha Adicionar à Tela de Início. No computador, use o menu de instalar do navegador.
-            <Button variant="ghost" className="mt-3" onClick={() => updateSettings({ installHintDismissed: false })}>
-              Mostrar aviso de instalação
-            </Button>
-          </div>
-        ) : (
-          <InstallBanner />
-        )}
-      </div>
 
       <Dialog
         open={pendingImport !== null}

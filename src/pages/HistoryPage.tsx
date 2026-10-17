@@ -195,7 +195,9 @@ function SessionRow({ session }: { session: ReturnType<typeof useGym>['state']['
   return (
     <Link to={`/historico/${session.id}`} className="block rounded-2xl border border-line bg-panel px-4 py-3">
       <div className="flex items-center justify-between gap-3">
-        <p className="font-display text-2xl uppercase leading-none">Treino {session.workoutId}</p>
+        <p className="font-display text-2xl uppercase leading-none">
+          {session.workoutIds.length > 1 ? 'Treinos' : 'Treino'} {session.workoutIds.join(' · ')}
+        </p>
         <p className="text-sm text-mist">
           {formatSessionWhen(session.startedAt)} · {formatTime(session.startedAt)}
         </p>

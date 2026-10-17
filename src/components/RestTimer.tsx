@@ -4,8 +4,6 @@ import { formatClock } from '../lib/format'
 import { clamp } from '../lib/number'
 import { cn } from './ui'
 
-const PRESETS = [30, 45, 60, 90, 120]
-
 export function RestTimer({
   open,
   initialSeconds,
@@ -91,17 +89,6 @@ export function RestTimer({
     begin(seconds)
   }
 
-  function pause() {
-    remainingRef.current = Math.max(0, endRef.current - Date.now())
-    setRemainingMs(remainingRef.current)
-    setRunning(false)
-  }
-
-  function resume() {
-    endRef.current = Date.now() + remainingRef.current
-    setRunning(true)
-  }
-
   return (
     <div className="fixed inset-0 z-[60] flex items-end justify-center bg-black/70 sm:items-center" role="presentation">
       <div
@@ -136,27 +123,16 @@ export function RestTimer({
           </div>
         </div>
         {done ? <p className="sr-only" aria-live="assertive">Descanso concluído</p> : null}
-        <div className="mt-4 flex flex-wrap justify-center gap-2">
+        <div className="mt-4 flex justify-center gap-2">
           <TimerChip onClick={() => bump(-10)}>−10s</TimerChip>
           <TimerChip onClick={() => bump(10)}>+10s</TimerChip>
-          {PRESETS.map((seconds) => (
-            <TimerChip key={seconds} active={durationRef.current === seconds} onClick={() => choose(seconds)}>
-              {`${seconds}s`}
-            </TimerChip>
-          ))}
+          <TimerChip active={durationRef.current === 30} onClick={() => choose(30)}>
+            30s
+          </TimerChip>
         </div>
-        <p className="mt-3 text-center text-xs text-mist">O tempo escolhido vale até o fim desta sessão.</p>
-        <div className="mt-4 grid grid-cols-3 gap-2">
-          <button type="button" className="min-h-11 rounded-full border border-line text-sm font-semibold" onClick={running ? pause : resume}>
-            {running ? 'Pausar' : 'Retomar'}
-          </button>
-          <button type="button" className="min-h-11 rounded-full border border-line text-sm font-semibold" onClick={() => begin(durationRef.current)}>
-            Resetar
-          </button>
-          <button type="button" className="min-h-11 rounded-full bg-accent text-sm font-semibold text-accent-ink" onClick={onClose}>
-            {done ? 'Continuar' : 'Fechar'}
-          </button>
-        </div>
+        <button type="button" className="mt-4 min-h-11 w-full rounded-full bg-accent text-sm font-semibold text-accent-ink" onClick={onClose}>
+          {done ? 'Continuar' : 'Fechar'}
+        </button>
       </div>
     </div>
   )

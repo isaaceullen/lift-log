@@ -3,11 +3,9 @@ import { WORKOUT_IDS, type AppState, type Workout, type WorkoutId } from '../typ
 export function createWorkout(id: WorkoutId): Workout {
   return {
     id,
-    label: '',
     days: [],
     cardioEnabled: true,
-    timerEnabled: true,
-    restSeconds: 60,
+    cardioPosition: 'end',
     exercises: [],
   }
 }
@@ -25,9 +23,10 @@ export function initialState(): AppState {
     lastUsed: {},
     activeSession: null,
     settings: {
-      theme: 'noite',
+      theme: 'brasa',
       soundEnabled: true,
-      installHintDismissed: false,
+      timerEnabled: true,
+      restSeconds: 60,
     },
   }
 }

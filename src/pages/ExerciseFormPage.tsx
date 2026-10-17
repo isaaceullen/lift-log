@@ -4,7 +4,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import { Dialog } from '../components/Dialog'
 import { ExerciseArt } from '../components/ExerciseArt'
 import { Button, FieldLabel, TextField, cn } from '../components/ui'
-import { allCategories, canonicalCategory, findExerciseByName } from '../lib/categories'
+import { allCategories, canonicalCategory, findExerciseByName, removableCategoryNames } from '../lib/categories'
 import { isSafeImageUrl } from '../lib/image'
 import { useGym } from '../store/GymProvider'
 import { WORKOUT_IDS } from '../types'
@@ -13,7 +13,7 @@ export function ExerciseFormPage() {
   const { exerciseId } = useParams()
   const isNew = !exerciseId
   const navigate = useNavigate()
-  const { state, seedStatus, addExercise, updateExercise, deleteExercise, addCategory, toast } = useGym()
+  const { state, seedStatus, addExercise, updateExercise, deleteExercise, addCategory, removeCategory, toast } = useGym()
   const exercise = state.exercises.find((item) => item.id === exerciseId)
   const nameId = useId()
   const imageId = useId()
@@ -80,6 +80,21 @@ export function ExerciseFormPage() {
       toast('Exercício atualizado.')
     }
     navigate('/biblioteca')
+  }
+
+  if (!isNew && exercise?.source === 'seed') {
+    return (
+      <div className="pt-[max(0.75rem,env(safe-area-inset-top))]">
+        <Link to="/biblioteca" className="inline-flex min-h-11 items-center gap-1 text-sm text-mist">
+          <ChevronLeft size={18} />
+          Biblioteca
+        </Link>
+        <h1 className="font-display text-4xl uppercase leading-none">{exercise.name}</h1>
+        <p className="mt-3 text-sm text-mist">
+          Este exercício faz parte da biblioteca inicial e não pode ser editado nem excluído.
+        </p>
+      </div>
+    )
   }
 
   if (!isNew && !exercise && seedStatus === 'loading') {
@@ -174,6 +189,23 @@ export function ExerciseFormPage() {
               Criar
             </Button>
           </div>
+          {removableCategoryNames(state).length > 0 ? (
+            <div className="mt-3 flex flex-wrap gap-2">
+              {removableCategoryNames(state).map((category) => (
+                <button
+                  key={category}
+                  type="button"
+                  onClick={() => {
+                    removeCategory(category)
+                    setCategories((current) => current.filter((item) => item !== category))
+                  }}
+                  className="rounded-full border border-line px-3 py-1.5 text-xs font-semibold text-mist"
+                >
+                  Remover {category}
+                </button>
+              ))}
+            </div>
+          ) : null}
           {categories.length === 0 ? (
             <p className="mt-2 text-xs text-mist">Sem categoria o exercício continua válido, mas fica mais difícil de filtrar.</p>
           ) : null}

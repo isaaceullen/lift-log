@@ -1,17 +1,23 @@
-import { Plus, Search } from 'lucide-react'
+import { Pencil, Plus, Search, X } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { Dialog } from '../components/Dialog'
 import { ExerciseArt } from '../components/ExerciseArt'
-import { buttonClass, cn } from '../components/ui'
-import { allCategories } from '../lib/categories'
+import { ImageLightbox } from '../components/ImageLightbox'
+import { Button, buttonClass, cn } from '../components/ui'
+import { allCategories, removableCategoryNames } from '../lib/categories'
 import { fold } from '../lib/text'
 import { useGym } from '../store/GymProvider'
+import type { Exercise } from '../types'
 
 export function LibraryPage() {
-  const { state, seedStatus } = useGym()
+  const { state, seedStatus, removeCategory } = useGym()
   const [query, setQuery] = useState('')
   const [selected, setSelected] = useState<string[]>([])
+  const [preview, setPreview] = useState<Exercise | null>(null)
+  const [pendingCategory, setPendingCategory] = useState<string | null>(null)
   const categories = allCategories(state)
+  const removable = removableCategoryNames(state)
 
   const exercises = useMemo(() => {
     const needle = fold(query)
@@ -64,6 +70,25 @@ export function LibraryPage() {
             </FilterChip>
           ))}
         </div>
+        {removable.length > 0 ? (
+          <div className="mt-3">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-mist">Suas categorias</p>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {removable.map((category) => (
+                <button
+                  key={category}
+                  type="button"
+                  onClick={() => setPendingCategory(category)}
+                  className="inline-flex min-h-8 items-center gap-1 rounded-full bg-accent/10 px-2.5 py-1 text-xs font-semibold text-accent"
+                >
+                  {category}
+                  <X size={12} />
+                  <span className="sr-only">Remover {category}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        ) : null}
       </header>
 
       {state.exercises.length === 0 && seedStatus === 'loading' ? (
@@ -80,36 +105,101 @@ export function LibraryPage() {
         </p>
       ) : null}
 
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        {exercises.map((exercise) => (
-          <Link
-            key={exercise.id}
-            to={`/biblioteca/editar/${exercise.id}`}
-            className="overflow-hidden rounded-3xl border border-line bg-panel"
-          >
-            <ExerciseArt
-              name={exercise.name}
-              categories={exercise.categories}
-              imageUrl={exercise.imageUrl}
-              className="h-36"
-            />
-            <div className="p-4">
-              <h2 className="text-lg font-semibold leading-tight">{exercise.name}</h2>
-              <div className="mt-2 flex flex-wrap gap-1.5">
-                {exercise.categories.length === 0 ? <span className="text-xs text-mist">Sem categoria</span> : null}
-                {exercise.categories.map((category) => (
-                  <span key={category} className="rounded-full bg-raised px-2 py-0.5 text-xs text-mist">
-                    {category}
-                  </span>
-                ))}
+      <div className="grid grid-cols-2 gap-2 sm:gap-3">
+        {exercises.map((exercise) => {
+          const owned = exercise.source === 'user'
+          return (
+            <article
+              key={exercise.id}
+              className={cn(
+                'overflow-hidden rounded-3xl border',
+                owned ? 'border-accent/35 bg-accent/[0.06]' : 'border-line bg-panel',
+              )}
+            >
+              <button
+                type="button"
+                className="block w-full"
+                aria-label={`Ver imagem de ${exercise.name}`}
+                onClick={() => setPreview(exercise)}
+              >
+                <ExerciseArt
+                  name={exercise.name}
+                  categories={exercise.categories}
+                  imageUrl={exercise.imageUrl}
+                  className="h-28 sm:h-36"
+                />
+              </button>
+              <div className="flex items-start gap-1 p-2.5 sm:p-3">
+                {owned ? (
+                  <Link
+                    to={`/biblioteca/editar/${exercise.id}`}
+                    aria-label={`Editar ${exercise.name}`}
+                    className="mt-0.5 grid size-9 shrink-0 place-items-center rounded-full text-mist hover:bg-raised hover:text-paper"
+                  >
+                    <Pencil size={15} />
+                  </Link>
+                ) : null}
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-start justify-between gap-1">
+                    <h2 className="text-sm font-semibold leading-tight sm:text-base">{exercise.name}</h2>
+                    <span
+                      className={cn(
+                        'shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide',
+                        owned ? 'bg-accent/15 text-accent' : 'bg-raised text-mist',
+                      )}
+                    >
+                      {owned ? 'Seu' : 'Base'}
+                    </span>
+                  </div>
+                  <div className="mt-1.5 flex flex-wrap gap-1">
+                    {exercise.categories.length === 0 ? <span className="text-[11px] text-mist">Sem categoria</span> : null}
+                    {exercise.categories.map((category) => (
+                      <span key={category} className="rounded-full bg-raised px-1.5 py-0.5 text-[11px] text-mist">
+                        {category}
+                      </span>
+                    ))}
+                  </div>
+                </div>
               </div>
-              {exercise.source === 'user' ? (
-                <p className="mt-2 text-[11px] uppercase tracking-[0.14em] text-accent">Seu exercício</p>
-              ) : null}
-            </div>
-          </Link>
-        ))}
+            </article>
+          )
+        })}
       </div>
+
+      <ImageLightbox
+        open={preview !== null}
+        name={preview?.name ?? ''}
+        categories={preview?.categories ?? []}
+        imageUrl={preview?.imageUrl ?? ''}
+        onClose={() => setPreview(null)}
+      />
+
+      <Dialog
+        open={pendingCategory !== null}
+        title="Remover categoria?"
+        description={
+          pendingCategory
+            ? `"${pendingCategory}" sai dos seus exercícios. Categorias da biblioteca inicial continuam no lugar.`
+            : undefined
+        }
+        onClose={() => setPendingCategory(null)}
+      >
+        <Button
+          variant="danger"
+          onClick={() => {
+            if (pendingCategory) {
+              removeCategory(pendingCategory)
+              setSelected((current) => current.filter((item) => item !== pendingCategory))
+            }
+            setPendingCategory(null)
+          }}
+        >
+          Remover
+        </Button>
+        <Button variant="ghost" onClick={() => setPendingCategory(null)}>
+          Cancelar
+        </Button>
+      </Dialog>
     </div>
   )
 }

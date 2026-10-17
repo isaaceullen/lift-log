@@ -1,52 +1,68 @@
-import { Search, X } from 'lucide-react'
-import { useMemo, useState } from 'react'
+import { Search } from 'lucide-react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { ExerciseArt } from './ExerciseArt'
-import { allCategories } from '../lib/categories'
+import { Button, cn } from './ui'
+import type { Exercise } from '../types'
 import { fold } from '../lib/text'
-import type { AppState, WorkoutId } from '../types'
-import { cn } from './ui'
 
 export function ExercisePicker({
   open,
-  state,
-  workoutId,
-  onClose,
-  onAdd,
+  exercises,
+  categories,
+  selectedIds,
+  onCancel,
+  onSave,
 }: {
   open: boolean
-  state: AppState
-  workoutId: WorkoutId
-  onClose: () => void
-  onAdd: (exerciseId: string) => void
+  exercises: Exercise[]
+  categories: string[]
+  selectedIds: string[]
+  onCancel: () => void
+  onSave: (exerciseIds: string[]) => void
 }) {
   const [query, setQuery] = useState('')
   const [category, setCategory] = useState<string | null>(null)
-  const categories = allCategories(state)
-  const workout = state.workouts[workoutId]
+  const [picked, setPicked] = useState<string[]>([])
+  const wasOpen = useRef(false)
 
-  const exercises = useMemo(() => {
+  useEffect(() => {
+    if (open && !wasOpen.current) {
+      setPicked([...new Set(selectedIds)])
+      setQuery('')
+      setCategory(null)
+    }
+    wasOpen.current = open
+  }, [open, selectedIds])
+
+  const visible = useMemo(() => {
     const needle = fold(query)
-    return [...state.exercises]
+    return [...exercises]
       .filter((exercise) => {
         const matchesName = !needle || fold(exercise.name).includes(needle)
         const matchesCategory = !category || exercise.categories.includes(category)
         return matchesName && matchesCategory
       })
       .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'))
-  }, [category, query, state.exercises])
+  }, [category, exercises, query])
 
   if (!open) return null
 
+  function toggle(exerciseId: string) {
+    setPicked((current) =>
+      current.includes(exerciseId) ? current.filter((id) => id !== exerciseId) : [...current, exerciseId],
+    )
+  }
+
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-ink">
-      <div className="mx-auto flex w-full max-w-3xl flex-1 flex-col px-4 pt-[max(0.75rem,env(safe-area-inset-top))] pb-[max(1rem,env(safe-area-inset-bottom))]">
+      <div className="mx-auto flex h-full min-h-0 w-full max-w-3xl flex-col px-4 pt-[max(0.75rem,env(safe-area-inset-top))]">
         <div className="flex items-center justify-between gap-3">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-mist">Treino {workoutId}</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-mist">Biblioteca</p>
             <h2 className="font-display text-3xl uppercase leading-none">Adicionar</h2>
           </div>
-          <button type="button" onClick={onClose} className="grid size-11 place-items-center rounded-full border border-line" aria-label="Fechar">
-            <X size={18} />
+          <button type="button" onClick={onCancel} className="min-h-11 rounded-full px-3 text-sm font-semibold text-mist">
+            Cancelar
           </button>
         </div>
         <label className="mt-4 flex min-h-11 items-center gap-2 rounded-2xl border border-line bg-panel px-3">
@@ -78,10 +94,10 @@ export function ExercisePicker({
             </button>
           ))}
         </div>
-        <div className="mt-4 flex-1 space-y-2 overflow-auto">
-          {exercises.length === 0 ? <p className="text-sm text-mist">Nada encontrado na biblioteca.</p> : null}
-          {exercises.map((exercise) => {
-            const count = workout.exercises.filter((item) => item.exerciseId === exercise.id).length
+        <div className="mt-4 min-h-0 flex-1 space-y-2 overflow-y-auto overscroll-contain pb-3">
+          {visible.length === 0 ? <p className="text-sm text-mist">Nada encontrado na biblioteca.</p> : null}
+          {visible.map((exercise) => {
+            const added = picked.includes(exercise.id)
             return (
               <div key={exercise.id} className="flex items-center gap-3 rounded-2xl border border-line bg-panel p-2">
                 <ExerciseArt name={exercise.name} categories={exercise.categories} imageUrl={exercise.imageUrl} className="size-16 shrink-0 rounded-xl" />
@@ -91,14 +107,22 @@ export function ExercisePicker({
                 </div>
                 <button
                   type="button"
-                  onClick={() => onAdd(exercise.id)}
-                  className="shrink-0 rounded-full bg-accent px-3 py-2 text-sm font-semibold text-accent-ink"
+                  onClick={() => toggle(exercise.id)}
+                  className={cn(
+                    'shrink-0 rounded-full px-3 py-2 text-sm font-semibold',
+                    added ? 'border border-heat/50 text-heat' : 'bg-accent text-accent-ink',
+                  )}
                 >
-                  {count > 0 ? 'De novo' : 'Adicionar'}
+                  {added ? 'Remover' : 'Adicionar'}
                 </button>
               </div>
             )
           })}
+        </div>
+        <div className="border-t border-line py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+          <Button className="w-full" onClick={() => onSave(picked)}>
+            Salvar
+          </Button>
         </div>
       </div>
     </div>

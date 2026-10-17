@@ -5,15 +5,18 @@ import { totalVolume } from './volume'
 import {
   isWorkoutId,
   WORKOUT_IDS,
+  type ActiveCardio,
   type ActiveExercise,
   type ActiveSession,
   type ActiveSet,
   type AppSettings,
   type AppState,
+  type CardioPosition,
   type Exercise,
   type LastUsed,
   type LoggedExercise,
   type Session,
+  type SessionCardio,
   type ThemeId,
   type Workout,
   type WorkoutExercise,
@@ -76,20 +79,29 @@ function sanitizeWorkout(id: WorkoutId, value: unknown, fallback: Workout): Work
     : []
   return {
     id,
-    label: typeof value.label === 'string' ? value.label.trim().slice(0, 40) : '',
     days,
     cardioEnabled: typeof value.cardioEnabled === 'boolean' ? value.cardioEnabled : true,
-    timerEnabled: typeof value.timerEnabled === 'boolean' ? value.timerEnabled : true,
-    restSeconds: intIn(typeof value.restSeconds === 'number' ? value.restSeconds : 60, 5, 600, 60),
+    cardioPosition: value.cardioPosition === 'start' ? 'start' : 'end',
     exercises,
   }
 }
 
-function sanitizeLogged(value: unknown): LoggedExercise | null {
+function orderWorkoutIds(ids: WorkoutId[]): WorkoutId[] {
+  return WORKOUT_IDS.filter((id) => ids.includes(id))
+}
+
+function readWorkoutIds(value: unknown, legacy: unknown): WorkoutId[] {
+  const fromList = Array.isArray(value) ? value.filter(isWorkoutId) : []
+  if (fromList.length > 0) return orderWorkoutIds(fromList)
+  return isWorkoutId(legacy) ? [legacy] : []
+}
+
+function sanitizeLogged(value: unknown, fallbackWorkoutId: WorkoutId): LoggedExercise | null {
   if (!isRecord(value) || typeof value.exerciseId !== 'string' || typeof value.name !== 'string') return null
   const totalSets = intIn(typeof value.totalSets === 'number' ? value.totalSets : 1, 1, 30, 1)
   return {
     instanceId: typeof value.instanceId === 'string' ? value.instanceId : value.exerciseId,
+    workoutId: isWorkoutId(value.workoutId) ? value.workoutId : fallbackWorkoutId,
     exerciseId: value.exerciseId,
     name: value.name.trim().slice(0, 80) || 'Exercício',
     categories: stringArray(value.categories),
@@ -103,34 +115,63 @@ function sanitizeLogged(value: unknown): LoggedExercise | null {
   }
 }
 
+function sanitizeCardios(value: unknown, workoutIds: WorkoutId[], legacy: SessionCardio[] | null): SessionCardio[] {
+  const allowed = new Set(workoutIds)
+  if (Array.isArray(value)) {
+    const cardios: SessionCardio[] = []
+    const seen = new Set<WorkoutId>()
+    for (const item of value) {
+      if (!isRecord(item) || !isWorkoutId(item.workoutId) || !allowed.has(item.workoutId) || seen.has(item.workoutId)) continue
+      seen.add(item.workoutId)
+      cardios.push({ workoutId: item.workoutId, completed: Boolean(item.completed) })
+    }
+    return cardios
+  }
+  return (legacy ?? []).filter((item) => allowed.has(item.workoutId))
+}
+
 function sanitizeSession(value: unknown): Session | null {
-  if (!isRecord(value) || typeof value.id !== 'string' || !isWorkoutId(value.workoutId)) return null
+  if (!isRecord(value) || typeof value.id !== 'string') return null
   if (typeof value.startedAt !== 'string' || typeof value.finishedAt !== 'string') return null
+  const listed = readWorkoutIds(value.workoutIds, value.workoutId)
+  if (listed.length === 0) return null
+  const fallback = listed[0]
   const exercises = Array.isArray(value.exercises)
     ? value.exercises.flatMap((item) => {
-        const exercise = sanitizeLogged(item)
+        const exercise = sanitizeLogged(item, fallback)
         return exercise ? [exercise] : []
       })
     : []
-  const cardioEnabled = value.cardioEnabled !== false
+  const workoutIds = orderWorkoutIds([...listed, ...exercises.map((exercise) => exercise.workoutId)])
+  const legacyCardio =
+    value.cardioEnabled === false
+      ? []
+      : typeof value.cardioCompleted === 'boolean' || value.cardioEnabled === true
+        ? [{ workoutId: workoutIds[0], completed: Boolean(value.cardioCompleted) }]
+        : null
   return {
     id: value.id,
-    workoutId: value.workoutId,
-    workoutLabel: typeof value.workoutLabel === 'string' ? value.workoutLabel.slice(0, 40) : '',
+    workoutIds,
     startedAt: value.startedAt,
     finishedAt: value.finishedAt,
     durationSeconds: intIn(typeof value.durationSeconds === 'number' ? value.durationSeconds : 0, 0, 60 * 60 * 12, 0),
     notes: typeof value.notes === 'string' ? value.notes.trim().slice(0, 1000) : '',
-    cardioEnabled,
-    cardioCompleted: cardioEnabled ? Boolean(value.cardioCompleted) : false,
+    cardios: sanitizeCardios(value.cardios, workoutIds, legacyCardio),
     exercises,
     totalVolume: totalVolume(exercises),
   }
 }
 
+function cardioPositionOf(value: unknown): CardioPosition {
+  return value === 'start' ? 'start' : 'end'
+}
+
 function sanitizeActive(value: unknown): ActiveSession | null {
   if (!isRecord(value) || typeof value.id !== 'string' || typeof value.startedAt !== 'string') return null
-  if (!isWorkoutId(value.workoutId) || !Array.isArray(value.exercises)) return null
+  if (!Array.isArray(value.exercises)) return null
+  const listed = readWorkoutIds(value.workoutIds, value.workoutId)
+  if (listed.length === 0) return null
+  const fallback = listed[0]
   const exercises: ActiveExercise[] = []
   for (const item of value.exercises) {
     if (!isRecord(item) || typeof item.instanceId !== 'string' || typeof item.exerciseId !== 'string') continue
@@ -150,11 +191,30 @@ function sanitizeActive(value: unknown): ActiveSession | null {
     }
     exercises.push({
       instanceId: item.instanceId,
+      workoutId: isWorkoutId(item.workoutId) ? item.workoutId : fallback,
       exerciseId: item.exerciseId,
       load: loadIn(typeof item.load === 'number' ? item.load : 0),
       reps: intIn(typeof item.reps === 'number' ? item.reps : 10, 1, 200, 10),
       sets,
     })
+  }
+  const workoutIds = orderWorkoutIds([...listed, ...exercises.map((exercise) => exercise.workoutId)])
+  const cardios: ActiveCardio[] = []
+  const seen = new Set<WorkoutId>()
+  if (Array.isArray(value.cardios)) {
+    for (const item of value.cardios) {
+      if (!isRecord(item) || !isWorkoutId(item.workoutId) || !workoutIds.includes(item.workoutId) || seen.has(item.workoutId)) {
+        continue
+      }
+      seen.add(item.workoutId)
+      cardios.push({
+        workoutId: item.workoutId,
+        position: cardioPositionOf(item.position),
+        completed: Boolean(item.completed),
+      })
+    }
+  } else if (typeof value.cardioCompleted === 'boolean' && workoutIds[0]) {
+    cardios.push({ workoutId: workoutIds[0], position: 'end', completed: value.cardioCompleted })
   }
   const lastUsedSnapshot: Record<string, LastUsed | null> = {}
   if (isRecord(value.lastUsedSnapshot)) {
@@ -170,10 +230,10 @@ function sanitizeActive(value: unknown): ActiveSession | null {
   }
   return {
     id: value.id,
-    workoutId: value.workoutId,
+    workoutIds,
     startedAt: value.startedAt,
     restSeconds: intIn(typeof value.restSeconds === 'number' ? value.restSeconds : 60, 5, 600, 60),
-    cardioCompleted: Boolean(value.cardioCompleted),
+    cardios,
     exercises,
     lastUsedSnapshot,
     pausedMs: typeof value.pausedMs === 'number' && Number.isFinite(value.pausedMs) ? Math.max(0, value.pausedMs) : 0,
@@ -181,13 +241,24 @@ function sanitizeActive(value: unknown): ActiveSession | null {
   }
 }
 
-function sanitizeSettings(value: unknown): AppSettings {
-  const theme: ThemeId = isRecord(value) && value.theme === 'brasa' ? 'brasa' : 'noite'
+function legacyRestSeconds(workouts: unknown): number | null {
+  if (!isRecord(workouts)) return null
+  for (const id of WORKOUT_IDS) {
+    const workout = workouts[id]
+    if (isRecord(workout) && typeof workout.restSeconds === 'number') return workout.restSeconds
+  }
+  return null
+}
+
+function sanitizeSettings(value: unknown, workouts: unknown): AppSettings {
+  const record = isRecord(value) ? value : {}
+  const theme: ThemeId = record.theme === 'noite' ? 'noite' : 'brasa'
+  const restSource = typeof record.restSeconds === 'number' ? record.restSeconds : (legacyRestSeconds(workouts) ?? 60)
   return {
     theme,
-    soundEnabled: isRecord(value) && typeof value.soundEnabled === 'boolean' ? value.soundEnabled : true,
-    installHintDismissed:
-      isRecord(value) && typeof value.installHintDismissed === 'boolean' ? value.installHintDismissed : false,
+    soundEnabled: typeof record.soundEnabled === 'boolean' ? record.soundEnabled : true,
+    timerEnabled: typeof record.timerEnabled === 'boolean' ? record.timerEnabled : true,
+    restSeconds: intIn(restSource, 5, 600, 60),
   }
 }
 
@@ -220,6 +291,13 @@ export function parseBackup(input: unknown): { ok: true; state: AppState } | { o
         return session ? [session] : []
       })
     : []
+  let activeSession = sanitizeActive(input.activeSession)
+  if (activeSession && isRecord(input.activeSession) && !Array.isArray(input.activeSession.cardios)) {
+    activeSession = {
+      ...activeSession,
+      cardios: activeSession.cardios.filter((cardio) => workouts[cardio.workoutId].cardioEnabled),
+    }
+  }
   const lastUsed: Record<string, LastUsed> = {}
   if (isRecord(input.lastUsed)) {
     for (const [key, entry] of Object.entries(input.lastUsed)) {
@@ -237,8 +315,8 @@ export function parseBackup(input: unknown): { ok: true; state: AppState } | { o
       workouts,
       sessions,
       lastUsed,
-      activeSession: sanitizeActive(input.activeSession),
-      settings: sanitizeSettings(input.settings),
+      activeSession,
+      settings: sanitizeSettings(input.settings, input.workouts),
     },
   }
 }

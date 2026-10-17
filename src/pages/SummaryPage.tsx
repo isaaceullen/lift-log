@@ -1,14 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
-import { Navigate, useNavigate, useParams } from 'react-router-dom'
+import { Navigate, useNavigate } from 'react-router-dom'
 import { Button, TextArea } from '../components/ui'
 import { sessionElapsedMs } from '../lib/dates'
 import { formatClock, formatDuration, formatLoad, formatVolume } from '../lib/format'
 import { totalVolume } from '../lib/volume'
 import { useGym } from '../store/GymProvider'
-import { isWorkoutId } from '../types'
-
 export function SummaryPage() {
-  const { workoutId } = useParams()
   const navigate = useNavigate()
   const gym = useGym()
   const active = gym.state.activeSession
@@ -22,16 +19,14 @@ export function SummaryPage() {
     gym.openReview()
   }, [gym])
 
-  if (!isWorkoutId(workoutId) || !active || active.workoutId !== workoutId) {
-    return <Navigate to="/" replace />
-  }
+  if (!active) return <Navigate to="/" replace />
 
-  const workout = gym.state.workouts[workoutId]
   const rows = active.exercises.map((entry) => {
     const catalog = gym.state.exercises.find((item) => item.id === entry.exerciseId)
     const completedSets = entry.sets.filter((set) => set.completed).length
     return {
       id: entry.instanceId,
+      workoutId: entry.workoutId,
       name: catalog?.name ?? 'Exercício removido',
       load: entry.load,
       reps: entry.reps,
@@ -39,15 +34,21 @@ export function SummaryPage() {
       totalSets: entry.sets.length,
     }
   })
-  const incomplete = rows.filter((row) => row.completedSets < row.totalSets).map((row) => `${row.name} · ${row.completedSets}/${row.totalSets} séries`)
-  if (workout.cardioEnabled && !active.cardioCompleted) incomplete.push('Cardio')
+  const incomplete = rows
+    .filter((row) => row.completedSets < row.totalSets)
+    .map((row) => `${row.name} · ${row.completedSets}/${row.totalSets} séries`)
+  for (const cardio of active.cardios) {
+    if (!cardio.completed) incomplete.push(active.workoutIds.length > 1 ? `Cardio · Treino ${cardio.workoutId}` : 'Cardio')
+  }
   const volume = totalVolume(rows)
   const elapsed = Math.floor(sessionElapsedMs(active, now) / 1000)
 
   return (
     <div className="mx-auto min-h-dvh max-w-3xl px-4 pt-[max(1rem,env(safe-area-inset-top))] pb-[max(1.5rem,env(safe-area-inset-bottom))]">
       <p className="text-xs font-semibold uppercase tracking-[0.18em] text-accent">Resumo</p>
-      <h1 className="font-display text-5xl uppercase leading-none">Treino {workout.id}</h1>
+      <h1 className="font-display text-5xl uppercase leading-none">
+        {active.workoutIds.length > 1 ? 'Treinos' : 'Treino'} {active.workoutIds.join(' · ')}
+      </h1>
       <p className="mt-2 text-sm text-mist">O tempo fica pausado nesta tela. Voltar continua a sessão.</p>
 
       <div className="mt-5 grid grid-cols-2 gap-3">
@@ -76,7 +77,10 @@ export function SummaryPage() {
         {rows.map((row) => (
           <div key={row.id} className="flex items-center justify-between gap-3 rounded-2xl bg-panel px-4 py-3">
             <div>
-              <p className="font-semibold">{row.name}</p>
+              <p className="font-semibold">
+                {active.workoutIds.length > 1 ? <span className="mr-2 text-xs text-mist">{row.workoutId}</span> : null}
+                {row.name}
+              </p>
               <p className="text-xs text-mist">
                 {row.completedSets}/{row.totalSets} séries · {formatLoad(row.load)} · {row.reps} reps
               </p>
@@ -84,11 +88,11 @@ export function SummaryPage() {
             <p className="text-sm font-semibold">{formatVolume(row.load * row.reps * row.completedSets)}</p>
           </div>
         ))}
-        {workout.cardioEnabled ? (
-          <div className="rounded-2xl bg-panel px-4 py-3 text-sm">
-            Cardio {active.cardioCompleted ? 'feito' : 'não marcado'}
+        {active.cardios.map((cardio) => (
+          <div key={cardio.workoutId} className="rounded-2xl bg-panel px-4 py-3 text-sm">
+            Cardio{active.workoutIds.length > 1 ? ` · Treino ${cardio.workoutId}` : ''} {cardio.completed ? 'feito' : 'não marcado'}
           </div>
-        ) : null}
+        ))}
       </section>
 
       <label className="mt-6 block">
@@ -113,7 +117,7 @@ export function SummaryPage() {
           variant="ghost"
           onClick={() => {
             gym.closeReview()
-            navigate(`/sessao/${workout.id}`)
+            navigate('/sessao')
           }}
         >
           Voltar para a sessão

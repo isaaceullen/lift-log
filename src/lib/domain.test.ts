@@ -15,12 +15,10 @@ const seed = JSON.parse(
 
 function session(partial: Partial<Session> & Pick<Session, 'id' | 'startedAt' | 'finishedAt'>): Session {
   return {
-    workoutId: 'A',
-    workoutLabel: '',
+    workoutIds: ['A'],
     durationSeconds: 60,
     notes: '',
-    cardioEnabled: true,
-    cardioCompleted: false,
+    cardios: [],
     exercises: [],
     totalVolume: 0,
     ...partial,
@@ -74,6 +72,7 @@ describe('stats', () => {
       exercises: [
         {
           instanceId: 'a',
+          workoutId: 'A',
           exerciseId: 'ex',
           name: 'Supino',
           categories: ['Peito'],
@@ -99,6 +98,7 @@ describe('stats', () => {
       exercises: [
         {
           instanceId: 'b',
+          workoutId: 'A',
           exerciseId: 'ex',
           name: 'Supino',
           categories: ['Peito'],

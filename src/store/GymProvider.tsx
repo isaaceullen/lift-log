@@ -5,7 +5,7 @@ import { mergeSeed } from '../lib/seed'
 import { loadState, saveState } from '../storage/db'
 import { parseBackup } from '../lib/normalize'
 import { reducer, type Action } from './reducer'
-import type { AppSettings, AppState, SeedFile, Session, Workout, WorkoutExercise, WorkoutId } from '../types'
+import { WORKOUT_IDS, type AppSettings, type AppState, type SeedFile, type Session, type Workout, type WorkoutExercise, type WorkoutId } from '../types'
 
 type Toast = { id: string; text: string }
 
@@ -25,7 +25,9 @@ type GymApi = {
   updateExercise: (id: string, input: ExerciseInput) => boolean
   deleteExercise: (id: string) => void
   addCategory: (name: string) => void
-  updateWorkout: (id: WorkoutId, patch: Partial<Pick<Workout, 'label' | 'days' | 'cardioEnabled' | 'timerEnabled' | 'restSeconds'>>) => void
+  removeCategory: (name: string) => void
+  updateWorkout: (id: WorkoutId, patch: Partial<Pick<Workout, 'days' | 'cardioEnabled' | 'cardioPosition'>>) => void
+  replaceWorkout: (workout: Workout) => void
   addToWorkout: (workoutId: WorkoutId, exerciseId: string) => void
   updateWorkoutExercise: (
     workoutId: WorkoutId,
@@ -34,14 +36,14 @@ type GymApi = {
   ) => void
   removeWorkoutExercise: (workoutId: WorkoutId, instanceId: string) => void
   reorderWorkout: (workoutId: WorkoutId, orderedIds: string[]) => void
-  startSession: (workoutId: WorkoutId) => void
+  startSession: (workoutIds: WorkoutId[]) => void
   setActiveLoad: (instanceId: string, load: number) => void
   setActiveReps: (instanceId: string, reps: number) => void
   toggleSet: (instanceId: string, setId: string, completed: boolean) => void
   addSet: (instanceId: string, permanent: boolean) => void
   removeSet: (instanceId: string, setId: string, permanent: boolean) => void
-  reorderSession: (orderedIds: string[]) => void
-  setCardio: (completed: boolean) => void
+  reorderSession: (workoutId: WorkoutId, orderedIds: string[]) => void
+  setCardio: (workoutId: WorkoutId, completed: boolean) => void
   setRestSeconds: (seconds: number) => void
   openReview: () => void
   closeReview: () => void
@@ -148,8 +150,8 @@ export function GymProvider({ children }: { children: ReactNode }) {
       return id
     },
     updateExercise: (id, input) => {
-      const exists = stateRef.current.exercises.some((exercise) => exercise.id === id)
-      if (!exists || findExerciseByName(stateRef.current.exercises, input.name, id)) return false
+      const current = stateRef.current.exercises.find((exercise) => exercise.id === id)
+      if (!current || current.source === 'seed' || findExerciseByName(stateRef.current.exercises, input.name, id)) return false
       dispatch({
         type: 'UPDATE_EXERCISE',
         id,
@@ -157,9 +159,15 @@ export function GymProvider({ children }: { children: ReactNode }) {
       })
       return true
     },
-    deleteExercise: (id) => dispatch({ type: 'DELETE_EXERCISE', id }),
+    deleteExercise: (id) => {
+      const current = stateRef.current.exercises.find((exercise) => exercise.id === id)
+      if (!current || current.source === 'seed') return
+      dispatch({ type: 'DELETE_EXERCISE', id })
+    },
     addCategory: (name) => dispatch({ type: 'ADD_CATEGORY', name }),
+    removeCategory: (name) => dispatch({ type: 'REMOVE_CATEGORY', name }),
     updateWorkout: (id, patch) => dispatch({ type: 'UPDATE_WORKOUT', id, patch }),
+    replaceWorkout: (workout) => dispatch({ type: 'REPLACE_WORKOUT', workout }),
     addToWorkout: (workoutId, exerciseId) => {
       dispatch({
         type: 'ADD_TO_WORKOUT',
@@ -180,15 +188,17 @@ export function GymProvider({ children }: { children: ReactNode }) {
     removeWorkoutExercise: (workoutId, instanceId) =>
       dispatch({ type: 'REMOVE_WORKOUT_EXERCISE', workoutId, instanceId }),
     reorderWorkout: (workoutId, orderedIds) => dispatch({ type: 'REORDER_WORKOUT', workoutId, orderedIds }),
-    startSession: (workoutId) => {
-      const workout = stateRef.current.workouts[workoutId]
+    startSession: (workoutIds) => {
+      const ordered = WORKOUT_IDS.filter((id) => workoutIds.includes(id))
       const setIds: Record<string, string[]> = {}
-      for (const item of workout.exercises) {
-        setIds[item.id] = Array.from({ length: Math.max(1, item.sets) }, () => createId())
+      for (const id of ordered) {
+        for (const item of stateRef.current.workouts[id].exercises) {
+          setIds[item.id] = Array.from({ length: Math.max(1, item.sets) }, () => createId())
+        }
       }
       dispatch({
         type: 'START_SESSION',
-        workoutId,
+        workoutIds: ordered,
         sessionId: createId(),
         startedAt: new Date().toISOString(),
         setIds,
@@ -205,8 +215,8 @@ export function GymProvider({ children }: { children: ReactNode }) {
         set: { id: createId(), completed: false, persistent: permanent },
       }),
     removeSet: (instanceId, setId, permanent) => dispatch({ type: 'REMOVE_SET', instanceId, setId, permanent }),
-    reorderSession: (orderedIds) => dispatch({ type: 'REORDER_SESSION', orderedIds }),
-    setCardio: (completed) => dispatch({ type: 'SET_CARDIO', completed }),
+    reorderSession: (workoutId, orderedIds) => dispatch({ type: 'REORDER_SESSION', workoutId, orderedIds }),
+    setCardio: (workoutId, completed) => dispatch({ type: 'SET_CARDIO', workoutId, completed }),
     setRestSeconds: (seconds) => dispatch({ type: 'SET_REST_SECONDS', seconds }),
     openReview: () => dispatch({ type: 'OPEN_REVIEW', at: new Date().toISOString() }),
     closeReview: () => dispatch({ type: 'CLOSE_REVIEW', at: new Date().toISOString() }),

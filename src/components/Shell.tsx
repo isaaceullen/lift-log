@@ -1,5 +1,5 @@
 import { ChartColumn, Database, House, Library } from 'lucide-react'
-import { NavLink, Outlet } from 'react-router-dom'
+import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import { cn } from './ui'
 
 const TABS = [
@@ -10,9 +10,18 @@ const TABS = [
 ]
 
 export function Shell() {
+  const editingWorkout = useLocation().pathname.startsWith('/treino')
   return (
-    <div className="mx-auto min-h-dvh max-w-6xl px-4 pb-[calc(5.75rem+env(safe-area-inset-bottom))]">
+    <div
+      className={cn(
+        'mx-auto min-h-dvh max-w-6xl px-4',
+        editingWorkout
+          ? 'pb-[calc(5.5rem+env(safe-area-inset-bottom))]'
+          : 'pb-[calc(5.75rem+env(safe-area-inset-bottom))]',
+      )}
+    >
       <Outlet />
+      {editingWorkout ? null : (
       <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-ink/90 backdrop-blur-xl pb-[env(safe-area-inset-bottom)]">
         <div className="mx-auto grid max-w-6xl grid-cols-4">
           {TABS.map((tab) => (
@@ -33,6 +42,7 @@ export function Shell() {
           ))}
         </div>
       </nav>
+      )}
     </div>
   )
 }

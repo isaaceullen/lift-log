@@ -57,8 +57,7 @@ export function SessionDetailPage() {
         {formatDayHeading(new Date(session.startedAt))} · {formatTime(session.startedAt)}
       </p>
       <h1 className="font-display text-5xl uppercase leading-none">
-        Treino {session.workoutId}
-        {session.workoutLabel ? <span className="ml-2 text-2xl text-mist">{session.workoutLabel}</span> : null}
+        {session.workoutIds.length > 1 ? 'Treinos' : 'Treino'} {session.workoutIds.join(' · ')}
       </h1>
       <p className="mt-2 text-sm text-mist">
         {formatDuration(session.durationSeconds)} · {formatVolume(totalVolume(view.exercises))}
@@ -80,21 +79,33 @@ export function SessionDetailPage() {
         </p>
       )}
 
-      {session.cardioEnabled ? (
+      {view.cardios.map((cardio) => (
         <button
+          key={cardio.workoutId}
           type="button"
           disabled={!editing || !draft}
-          onClick={() => draft && setDraft({ ...draft, cardioCompleted: !draft.cardioCompleted })}
+          onClick={() =>
+            draft &&
+            setDraft({
+              ...draft,
+              cardios: draft.cardios.map((item) =>
+                item.workoutId === cardio.workoutId ? { ...item, completed: !item.completed } : item,
+              ),
+            })
+          }
           className="mt-3 flex w-full items-center justify-between rounded-2xl border border-line bg-panel px-4 py-3 text-left disabled:opacity-100"
         >
-          <span>Cardio</span>
-          <span className="font-semibold">{view.cardioCompleted ? 'Feito' : 'Não marcado'}</span>
+          <span>Cardio{view.workoutIds.length > 1 ? ` · Treino ${cardio.workoutId}` : ''}</span>
+          <span className="font-semibold">{cardio.completed ? 'Feito' : 'Não marcado'}</span>
         </button>
-      ) : null}
+      ))}
 
       <div className="mt-4 space-y-3">
         {view.exercises.map((exercise, index) => (
           <article key={`${exercise.instanceId}-${index}`} className="rounded-3xl border border-line bg-panel p-4">
+            {view.workoutIds.length > 1 ? (
+              <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-mist">Treino {exercise.workoutId}</p>
+            ) : null}
             <h2 className="font-semibold">{exercise.name}</h2>
             <p className="text-xs text-mist">{exercise.categories.join(' · ')}</p>
             {exercise.description ? <p className="mt-2 text-sm">{exercise.description}</p> : null}
@@ -106,7 +117,7 @@ export function SessionDetailPage() {
                   value={exercise.load}
                   min={0}
                   max={2000}
-                  step={2.5}
+                  step={5}
                   onChange={(load) => updateExercise(index, { load })}
                 />
                 <Stepper
