@@ -1,0 +1,127 @@
+@import "tailwindcss";
+
+:root {
+  --ink: #07080b;
+  --panel: #12141b;
+  --raised: #1c2030;
+  --line: #313748;
+  --paper: #f4f6f8;
+  --mist: #9aa3b5;
+  --accent: #d6ff3c;
+  --accent-ink: #15190a;
+  --heat: #ff4d2e;
+  --good: #3ddc97;
+  --warn: #ffc14a;
+  color-scheme: dark;
+}
+
+:root[data-theme="brasa"] {
+  --ink: #0c0907;
+  --panel: #17110e;
+  --raised: #261c16;
+  --line: #3d2e25;
+  --paper: #f8f3ee;
+  --mist: #b4a398;
+  --accent: #ffb020;
+  --accent-ink: #1c1304;
+  --heat: #ff5a36;
+  --good: #3ddc97;
+  --warn: #ffd27a;
+}
+
+@theme inline {
+  --font-sans: "Outfit", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Oswald", Impact, sans-serif;
+  --color-ink: var(--ink);
+  --color-panel: var(--panel);
+  --color-raised: var(--raised);
+  --color-line: var(--line);
+  --color-paper: var(--paper);
+  --color-mist: var(--mist);
+  --color-accent: var(--accent);
+  --color-accent-ink: var(--accent-ink);
+  --color-heat: var(--heat);
+  --color-good: var(--good);
+  --color-warn: var(--warn);
+}
+
+* {
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  min-height: 100dvh;
+  font-family: var(--font-sans);
+  color: var(--paper);
+  background:
+    radial-gradient(900px 420px at 100% -10%, color-mix(in srgb, var(--accent) 16%, transparent), transparent 55%),
+    radial-gradient(700px 380px at -10% 10%, color-mix(in srgb, var(--heat) 12%, transparent), transparent 50%),
+    var(--ink);
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+
+button,
+input,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+input,
+textarea {
+  font-size: 16px;
+}
+
+::selection {
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.no-scrollbar {
+  scrollbar-width: none;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.today-card {
+  animation: forja-glow 3.8s ease-in-out infinite;
+}
+
+@keyframes forja-glow {
+  0%,
+  100% {
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 65%, transparent);
+  }
+  50% {
+    box-shadow:
+      0 0 0 1px var(--accent),
+      0 18px 50px color-mix(in srgb, var(--accent) 16%, transparent);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .today-card {
+    animation: none;
+    box-shadow: 0 0 0 1px var(--accent);
+  }
+}
