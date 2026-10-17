@@ -98,6 +98,6 @@
     { "id": "seed-096", "name": "Banco Lombar", "categories": ["Costas"], "imageUrl": "https://fitnessprogramer.com/wp-content/uploads/2021/02/hyperextension.gif" },
     { "id": "seed-097", "name": "Rosca Scott unilateral com halteres", "categories": ["Bíceps"], "imageUrl": "https://www.mundoboaforma.com.br/wp-content/uploads/2020/11/Rosca-Scott-com-halteres-unilateral.gif" },
     { "id": "seed-098", "name": "Tríceps testa com Barra reta", "categories": ["Tríceps"], "imageUrl": "https://www.hipertrofia.org/blog/wp-content/uploads/2024/02/barbell-lying-triceps-extension-skull-crusher.gif" },
-    { "id": "seed-099", "name": "Elevação lateral conjugado com frontal", "categories": ["Ombro"], "imageUrl": "https://static.exercisedb.dev/media/xMjBKwn.gif" }
+    { "id": "seed-099", "name": "Elevação lateral conjugado com frontal", "categories": ["Ombro"], "imageUrl": "PLACEHOLDER" }
   ]
 }
