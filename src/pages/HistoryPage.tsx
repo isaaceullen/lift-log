@@ -14,6 +14,10 @@ export function HistoryPage() {
   const [cursor, setCursor] = useState(() => new Date(today.getFullYear(), today.getMonth(), 1))
   const [selectedKey, setSelectedKey] = useState(() => dateKey(today))
   const stats = useMemo(() => exerciseStats(state.sessions), [state.sessions])
+  const liveName = useMemo(() => {
+    const names = new Map(state.exercises.map((exercise) => [exercise.id, exercise.name]))
+    return (exerciseId: string, fallback: string) => names.get(exerciseId) || fallback
+  }, [state.exercises])
   const [exerciseId, setExerciseId] = useState<string>('')
   const selectedExercise = exerciseId || [...stats].sort((a, b) => b.count - a.count)[0]?.exerciseId || ''
   const series = loadSeries(state.sessions, selectedExercise)
@@ -65,10 +69,10 @@ export function HistoryPage() {
             className="min-h-11 rounded-2xl border border-line bg-raised px-3 text-sm"
           >
             {[...stats]
-              .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'))
+              .sort((a, b) => liveName(a.exerciseId, a.name).localeCompare(liveName(b.exerciseId, b.name), 'pt-BR'))
               .map((item) => (
                 <option key={item.exerciseId} value={item.exerciseId}>
-                  {item.name}
+                  {liveName(item.exerciseId, item.name)}
                 </option>
               ))}
           </select>
@@ -83,7 +87,7 @@ export function HistoryPage() {
             .slice(0, 6)
             .map((item) => (
               <li key={item.exerciseId} className="flex items-center justify-between gap-3 py-2">
-                <span className="truncate">{item.name}</span>
+                <span className="truncate">{liveName(item.exerciseId, item.name)}</span>
                 <span className="shrink-0 text-sm text-mist">{item.count}x</span>
               </li>
             ))}
@@ -94,7 +98,7 @@ export function HistoryPage() {
             .slice(0, 6)
             .map((item) => (
               <li key={item.exerciseId} className="flex items-center justify-between gap-3 py-2">
-                <span className="truncate">{item.name}</span>
+                <span className="truncate">{liveName(item.exerciseId, item.name)}</span>
                 <span className="shrink-0 text-sm font-semibold text-accent">{formatLoad(item.maxLoad)}</span>
               </li>
             ))}

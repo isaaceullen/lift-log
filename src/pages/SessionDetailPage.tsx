@@ -106,7 +106,7 @@ export function SessionDetailPage() {
             {view.workoutIds.length > 1 ? (
               <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-mist">Treino {exercise.workoutId}</p>
             ) : null}
-            <h2 className="font-semibold">{exercise.name}</h2>
+            <h2 className="font-semibold">{state.exercises.find((item) => item.id === exercise.exerciseId)?.name ?? exercise.name}</h2>
             <p className="text-xs text-mist">{exercise.categories.join(' · ')}</p>
             {exercise.description ? <p className="mt-2 text-sm">{exercise.description}</p> : null}
             {editing && draft ? (

@@ -9,7 +9,7 @@ export default defineConfig({
     tailwindcss(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.svg', 'apple-touch-icon.png', 'seed-exercises.json'],
+      includeAssets: ['favicon.svg', 'apple-touch-icon.png'],
       manifest: {
         id: '/',
         name: 'Forja — Treino de academia',
@@ -35,8 +35,19 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,svg,png,woff2,json,ico,webmanifest}'],
+        globIgnores: ['**/seed-exercises.json'],
         navigateFallback: 'index.html',
         runtimeCaching: [
+          {
+            urlPattern: /\/seed-exercises\.json(?:\?.*)?$/i,
+            handler: 'NetworkFirst',
+            options: {
+              cacheName: 'forja-seed',
+              networkTimeoutSeconds: 4,
+              expiration: { maxEntries: 1, maxAgeSeconds: 60 * 60 * 24 },
+              cacheableResponse: { statuses: [0, 200] },
+            },
+          },
           {
             urlPattern: /^https:\/\/.*\.(?:png|jpe?g|gif|webp|svg)(?:\?.*)?$/i,
             handler: 'CacheFirst',

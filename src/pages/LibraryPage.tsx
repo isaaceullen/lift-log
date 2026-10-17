@@ -5,7 +5,7 @@ import { Dialog } from '../components/Dialog'
 import { ExerciseArt } from '../components/ExerciseArt'
 import { ImageLightbox } from '../components/ImageLightbox'
 import { Button, buttonClass, cn } from '../components/ui'
-import { allCategories, removableCategoryNames } from '../lib/categories'
+import { allCategories, removableCategoryNames } from '../lib/library'
 import { fold } from '../lib/text'
 import { useGym } from '../store/GymProvider'
 import type { Exercise } from '../types'
@@ -22,6 +22,7 @@ export function LibraryPage() {
   const exercises = useMemo(() => {
     const needle = fold(query)
     return [...state.exercises]
+      .filter((exercise) => !exercise.removed)
       .filter((exercise) => {
         const matchesName = !needle || fold(exercise.name).includes(needle)
         const matchesCategory =

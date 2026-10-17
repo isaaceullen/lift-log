@@ -46,6 +46,7 @@ function sanitizeExercise(value: unknown): Exercise | null {
     categories: stringArray(value.categories),
     imageUrl: typeof value.imageUrl === 'string' ? value.imageUrl.trim().slice(0, 800) : '',
     source,
+    removed: source === 'seed' && value.removed === true,
   }
 }
 

@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
-import { findExerciseByName } from './categories'
+import { findExerciseByName } from './library'
 import { sessionElapsedMs } from './dates'
 import { initialState } from './initial'
 import { mergeSeed } from './seed'
@@ -36,7 +36,7 @@ describe('seed', () => {
     expect(twice.exercises).toHaveLength(once.exercises.length)
   })
 
-  it('skips a deleted seed and a custom exercise with the same name', () => {
+  it('updates an existing seed id without touching history, even if the name changed', () => {
     const base = initialState()
     const custom: Exercise = {
       id: 'user-1',
@@ -45,11 +45,46 @@ describe('seed', () => {
       imageUrl: '',
       source: 'user',
     }
-    const withCustom = { ...base, exercises: [custom], deletedSeedIds: ['seed-002'] }
-    const merged = mergeSeed(withCustom, seed)
-    expect(merged.exercises.some((exercise) => exercise.id === 'seed-001')).toBe(false)
-    expect(merged.exercises.some((exercise) => exercise.id === 'seed-002')).toBe(false)
-    expect(merged.exercises.some((exercise) => exercise.id === 'seed-003')).toBe(true)
+    const stale: Exercise = {
+      id: 'seed-001',
+      name: 'Nome antigo',
+      categories: ['Outra'],
+      imageUrl: 'https://example.com/old.gif',
+      source: 'seed',
+    }
+    const retired: Exercise = {
+      id: 'seed-fora',
+      name: 'Exercício que saiu',
+      categories: ['Peito'],
+      imageUrl: '',
+      source: 'seed',
+    }
+    const sessions = [
+      session({
+        id: 's1',
+        startedAt: '2026-10-16T12:00:00.000Z',
+        finishedAt: '2026-10-16T13:00:00.000Z',
+      }),
+    ]
+    const stored = {
+      ...base,
+      exercises: [custom, stale, retired],
+      deletedSeedIds: ['seed-002'],
+      lastUsed: { 'seed-001': { load: 40, reps: 8 }, 'seed-fora': { load: 12, reps: 10 } },
+      sessions,
+    }
+    const merged = mergeSeed(stored, seed)
+    const updated = merged.exercises.find((exercise) => exercise.id === 'seed-001')
+    expect(updated?.name).toBe('Supino Reto com Barra')
+    expect(updated?.categories).toContain('Peito')
+    expect(updated?.imageUrl).toBe('')
+    expect(updated?.removed).toBe(false)
+    expect(merged.exercises.some((exercise) => exercise.id === 'user-1')).toBe(true)
+    expect(merged.exercises.some((exercise) => exercise.id === 'seed-002' && !exercise.removed)).toBe(true)
+    expect(merged.exercises.find((exercise) => exercise.id === 'seed-fora')?.removed).toBe(true)
+    expect(merged.lastUsed['seed-001']).toEqual({ load: 40, reps: 8 })
+    expect(merged.lastUsed['seed-fora']).toEqual({ load: 12, reps: 10 })
+    expect(merged.sessions).toBe(sessions)
   })
 })
 

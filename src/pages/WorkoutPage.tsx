@@ -8,7 +8,7 @@ import { ImageLightbox } from '../components/ImageLightbox'
 import { SortableItem, SortableList } from '../components/Sortable'
 import { Stepper } from '../components/Stepper'
 import { Button, FieldLabel, TextArea, Toggle } from '../components/ui'
-import { allCategories } from '../lib/categories'
+import { allCategories } from '../lib/library'
 import { WEEKDAYS } from '../lib/dates'
 import { createId } from '../lib/id'
 import { moveId } from '../lib/reorder'
@@ -198,7 +198,7 @@ export function WorkoutPage() {
 
       <ExercisePicker
         open={pickerOpen}
-        exercises={gym.state.exercises}
+        exercises={gym.state.exercises.filter((exercise) => !exercise.removed)}
         categories={allCategories(gym.state)}
         selectedIds={draft.exercises.map((item) => item.exerciseId)}
         onCancel={() => setPickerOpen(false)}

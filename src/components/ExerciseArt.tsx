@@ -1,26 +1,11 @@
 import { useState } from 'react'
-import { primaryCategory } from '../lib/categories'
+import { primaryCategory } from '../lib/library'
 import { isSafeImageUrl } from '../lib/image'
 import { cn } from './ui'
 
-const WASH: Record<string, string> = {
-  Peito: '#ff5a36',
-  Costas: '#49c2ff',
-  Ombros: '#d6ff3c',
-  Bíceps: '#c084fc',
-  Tríceps: '#ff8a3d',
-  Pernas: '#3ddc97',
-  Glúteos: '#ff5fa2',
-  Abdômen: '#ffc14a',
-  Panturrilha: '#7ee0c6',
-  Composto: '#f4f5f8',
-  Isolado: '#9aa3b5',
-}
-
-const FALLBACK = ['#d6ff3c', '#ff5a36', '#49c2ff', '#ffc14a', '#3ddc97', '#c084fc']
+const FALLBACK = ['#ffb020', '#ff5a36', '#49c2ff', '#ffc14a', '#3ddc97', '#c084fc']
 
 function washFor(category: string): string {
-  if (WASH[category]) return WASH[category]
   let hash = 0
   for (const char of category) hash = (hash + char.charCodeAt(0)) % FALLBACK.length
   return FALLBACK[hash] ?? FALLBACK[0]

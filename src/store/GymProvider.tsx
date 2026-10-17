@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react'
-import { findExerciseByName } from '../lib/categories'
+import { findExerciseByName } from '../lib/library'
 import { createId } from '../lib/id'
 import { mergeSeed } from '../lib/seed'
 import { loadState, saveState } from '../storage/db'
@@ -109,22 +109,29 @@ export function GymProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let cancelled = false
-    fetch('/seed-exercises.json')
-      .then((response) => {
+    async function pullSeed() {
+      try {
+        const response = await fetch('/seed-exercises.json', { cache: 'no-store' })
         if (!response.ok) throw new Error('seed')
-        return response.json() as Promise<SeedFile>
-      })
-      .then((seed) => {
+        const seed = (await response.json()) as SeedFile
         if (cancelled) return
         seedRef.current = seed
         setState((current) => mergeSeed(current, seed))
         setSeedStatus('ready')
-      })
-      .catch(() => {
-        if (!cancelled) setSeedStatus('error')
-      })
+      } catch {
+        if (!cancelled) setSeedStatus((status) => (status === 'ready' ? status : 'error'))
+      }
+    }
+    void pullSeed()
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') void pullSeed()
+    }
+    document.addEventListener('visibilitychange', onVisible)
+    const interval = window.setInterval(() => void pullSeed(), 15 * 60 * 1000)
     return () => {
       cancelled = true
+      document.removeEventListener('visibilitychange', onVisible)
+      window.clearInterval(interval)
     }
   }, [])
 

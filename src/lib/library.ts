@@ -1,59 +1,6 @@
 import type { AppState, Exercise, Workout } from '../types'
 import { fold } from './text'
 
-const PREFERRED = [
-  'Peito',
-  'Costas',
-  'Ombros',
-  'Bíceps',
-  'Tríceps',
-  'Pernas',
-  'Glúteos',
-  'Panturrilha',
-  'Abdômen',
-  'Corpo inteiro',
-  'Composto',
-  'Isolado',
-]
-
-export function seedCategoryNames(exercises: Exercise[]): string[] {
-  const names = new Set<string>()
-  for (const exercise of exercises) {
-    if (exercise.source !== 'seed') continue
-    for (const category of exercise.categories) names.add(category)
-  }
-  return [...names]
-}
-
-/** Categorias criadas no aparelho. As que já existem num exercício da base ficam de fora. */
-export function removableCategoryNames(state: Pick<AppState, 'customCategories' | 'exercises'>): string[] {
-  const locked = new Set(seedCategoryNames(state.exercises))
-  return allCategories(state).filter(
-    (name) =>
-      !locked.has(name) &&
-      (state.customCategories.includes(name) ||
-        state.exercises.some((exercise) => exercise.source === 'user' && exercise.categories.includes(name))),
-  )
-}
-
-export function allCategories(state: Pick<AppState, 'customCategories' | 'exercises'>): string[] {
-  const names = new Set<string>(state.customCategories)
-  for (const exercise of state.exercises) {
-    for (const category of exercise.categories) names.add(category)
-  }
-  const preferred = PREFERRED.filter((name) => names.has(name))
-  const rest = [...names]
-    .filter((name) => !PREFERRED.includes(name))
-    .sort((a, b) => a.localeCompare(b, 'pt-BR'))
-  return [...preferred, ...rest]
-}
-
-export function canonicalCategory(state: Pick<AppState, 'customCategories' | 'exercises'>, name: string): string {
-  const trimmed = name.trim()
-  const key = fold(trimmed)
-  return allCategories(state).find((category) => fold(category) === key) ?? trimmed
-}
-
 export function findExerciseByName(
   exercises: Exercise[],
   name: string,
@@ -61,7 +8,47 @@ export function findExerciseByName(
 ): Exercise | undefined {
   const key = fold(name)
   if (!key) return undefined
-  return exercises.find((exercise) => exercise.id !== exceptId && fold(exercise.name) === key)
+  return exercises.find(
+    (exercise) => !exercise.removed && exercise.id !== exceptId && fold(exercise.name) === key,
+  )
+}
+
+/** Categorias que existem no seed visível ou que a pessoa criou. Nada além disso. */
+export function allCategories(state: Pick<AppState, 'customCategories' | 'exercises'>): string[] {
+  const names = new Set<string>()
+  for (const category of state.customCategories) names.add(category)
+  for (const exercise of state.exercises) {
+    if (exercise.removed) continue
+    for (const category of exercise.categories) names.add(category)
+  }
+  return [...names].sort((a, b) => a.localeCompare(b, 'pt-BR'))
+}
+
+export function seedCategoryNames(exercises: Exercise[]): string[] {
+  const names = new Set<string>()
+  for (const exercise of exercises) {
+    if (exercise.source !== 'seed' || exercise.removed) continue
+    for (const category of exercise.categories) names.add(category)
+  }
+  return [...names]
+}
+
+export function removableCategoryNames(state: Pick<AppState, 'customCategories' | 'exercises'>): string[] {
+  const locked = new Set(seedCategoryNames(state.exercises))
+  return allCategories(state).filter(
+    (name) =>
+      !locked.has(name) &&
+      (state.customCategories.includes(name) ||
+        state.exercises.some(
+          (exercise) => !exercise.removed && exercise.source === 'user' && exercise.categories.includes(name),
+        )),
+  )
+}
+
+export function canonicalCategory(state: Pick<AppState, 'customCategories' | 'exercises'>, name: string): string {
+  const trimmed = name.trim()
+  const key = fold(trimmed)
+  return allCategories(state).find((category) => fold(category) === key) ?? trimmed
 }
 
 export function workoutCategoryNames(workout: Workout, exercises: Exercise[]): string[] {
@@ -71,7 +58,6 @@ export function workoutCategoryNames(workout: Workout, exercises: Exercise[]): s
   for (const item of workout.exercises) {
     const exercise = catalog.get(item.exerciseId)
     for (const category of exercise?.categories ?? []) {
-      if (category === 'Composto' || category === 'Isolado') continue
       if (seen.has(category)) continue
       seen.add(category)
       names.push(category)
@@ -81,5 +67,5 @@ export function workoutCategoryNames(workout: Workout, exercises: Exercise[]): s
 }
 
 export function primaryCategory(categories: string[]): string {
-  return categories.find((category) => category !== 'Composto' && category !== 'Isolado') ?? categories[0] ?? 'Geral'
+  return categories[0] ?? 'Geral'
 }

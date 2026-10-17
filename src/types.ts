@@ -10,6 +10,8 @@ export type Exercise = {
   categories: string[]
   imageUrl: string
   source: 'seed' | 'user'
+  /** Saiu do seed oficial. Continua no aparelho para o histórico, fora da biblioteca. */
+  removed?: boolean
 }
 
 export type CardioPosition = 'start' | 'end'

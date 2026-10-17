@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react'
 import { Dialog } from '../components/Dialog'
 import { Stepper } from '../components/Stepper'
-import { Button, TextField, Toggle, cn } from '../components/ui'
+import { Button, Toggle, cn } from '../components/ui'
 import { dateKey } from '../lib/dates'
 import { formatBytes } from '../lib/format'
 import { exportDocument } from '../storage/db'
@@ -12,7 +12,6 @@ export function DataPage() {
   const fileRef = useRef<HTMLInputElement>(null)
   const [pendingImport, setPendingImport] = useState<string | null>(null)
   const [clearOpen, setClearOpen] = useState(false)
-  const [phrase, setPhrase] = useState('')
   const bytes = new Blob([exportDocument(state)]).size
 
   function download() {
@@ -87,7 +86,7 @@ export function DataPage() {
       <section className="mt-6 rounded-3xl border border-line bg-panel p-4">
         <h2 className="font-display text-3xl uppercase leading-none">Backup</h2>
         <p className="mt-2 text-sm text-mist">
-          Exporte um JSON com treinos, histórico e exercícios. Importar substitui o que está neste aparelho. Exercícios novos da biblioteca inicial entram se o nome ainda não existir.
+          Exporte um JSON com treinos, histórico e exercícios. Importar substitui o que está neste aparelho. A biblioteca inicial continua sendo atualizada pelo id de cada exercício.
         </p>
         <div className="mt-4 grid gap-2 sm:grid-cols-2">
           <Button onClick={download}>Exportar tudo</Button>
@@ -114,7 +113,7 @@ export function DataPage() {
         <p className="mt-2 text-sm text-mist">
           Limpar apaga treinos, histórico, cargas e exercícios personalizados. A biblioteca inicial volta em seguida.
         </p>
-        <Button variant="danger" className="mt-4" onClick={() => { setPhrase(''); setClearOpen(true) }}>
+        <Button variant="danger" className="mt-4" onClick={() => setClearOpen(true)}>
           Limpar toda a base de dados
         </Button>
       </section>
@@ -122,7 +121,7 @@ export function DataPage() {
       <section className="mt-4 rounded-3xl border border-line bg-panel p-4">
         <h2 className="font-display text-3xl uppercase leading-none">Biblioteca inicial</h2>
         <p className="mt-2 text-sm leading-relaxed text-mist">
-          O arquivo <code className="text-paper">public/seed-exercises.json</code> é editável no repositório. Novos nomes entram na próxima abertura. Exercícios dessa base não podem ser editados nem excluídos. Descrições não fazem parte desse arquivo: elas nascem quando você monta o treino.
+          O arquivo <code className="text-paper">public/seed-exercises.json</code> é a lista oficial. Na próxima abertura, um id novo entra, nome, categorias e imagem de um id existente são atualizados, e um id que saiu do arquivo deixa a biblioteca. O histórico continua no mesmo id. Exercícios dessa base não podem ser editados nem excluídos. Descrições não fazem parte desse arquivo: elas nascem quando você monta o treino.
         </p>
       </section>
 
@@ -150,27 +149,18 @@ export function DataPage() {
       <Dialog
         open={clearOpen}
         title="Limpar toda a base de dados"
-        description="Digite APAGAR para confirmar. Não há como desfazer sem um backup."
+        description="Treinos, histórico, cargas e exercícios personalizados deste aparelho serão apagados. Não há como desfazer sem um backup."
         onClose={() => setClearOpen(false)}
-        dismissable
       >
-        <TextField
-          value={phrase}
-          onChange={(event) => setPhrase(event.target.value)}
-          placeholder="APAGAR"
-          aria-label="Digite APAGAR para confirmar"
-          autoComplete="off"
-        />
         <Button
           variant="danger"
-          disabled={phrase !== 'APAGAR'}
           onClick={() => {
             clearAll()
             setClearOpen(false)
             toast('Base limpa.')
           }}
         >
-          Limpar toda a base de dados
+          Confirmar
         </Button>
         <Button variant="ghost" onClick={() => setClearOpen(false)}>
           Cancelar

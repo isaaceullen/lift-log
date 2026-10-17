@@ -1,4 +1,4 @@
-import { findExerciseByName, canonicalCategory, seedCategoryNames } from '../lib/categories'
+import { findExerciseByName, canonicalCategory, seedCategoryNames } from '../lib/library'
 import { initialState } from '../lib/initial'
 import { createId } from '../lib/id'
 import { intIn, loadIn } from '../lib/number'
